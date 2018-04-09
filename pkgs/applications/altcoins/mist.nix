@@ -1,0 +1,77 @@
+{ stdenv, lib, makeWrapper, fetchurl, unzip, atomEnv, makeDesktopItem, buildFHSUserEnv }:
+
+let
+  version = "0.10.0";
+  name = "mist-${version}";
+
+  throwSystem = throw "Unsupported system: ${stdenv.system}";
+
+  meta = with stdenv.lib; {
+    description = "Browse and use Ðapps on the Ethereum network";
+    homepage = https://github.com/ethereum/mist;
+    license = licenses.gpl3;
+    maintainers = with maintainers; [];
+    platforms = [ "x86_64-linux" "i686-linux" ];
+  };
+
+  urlVersion = builtins.replaceStrings ["."] ["-"] version;
+
+  desktopItem = makeDesktopItem rec {
+    name = "Mist";
+    exec = "mist";
+    icon = "mist";
+    desktopName = name;
+    genericName = "Mist Browser";
+    categories = "Network;";
+  };
+
+  linux = {
+    inherit name version;
+
+    src = {
+      i686-linux = fetchurl {
+        url = "https://github.com/ethereum/mist/releases/download/v${version}/Mist-linux32-${urlVersion}.zip";
+        sha256 = "12q5h6gh9zzhndg6yfka821rblq3l80d2qzqrq4nbq6rlsshjp9d";
+      };
+      x86_64-linux = fetchurl {
+        url = "https://github.com/ethereum/mist/releases/download/v${version}/Mist-linux64-${urlVersion}.zip";
+        sha256 = "01k17j7fdfhxfd26njdsiwap0xnka2536k9ydk32czd8db7ya9zi";
+      };
+    }.${stdenv.system} or throwSystem;
+
+    buildInputs = [ unzip makeWrapper ];
+
+    buildCommand = ''
+      mkdir -p $out/lib/mist $out/bin
+      unzip -d $out/lib/mist $src
+      ln -s $out/lib/mist/mist $out/bin
+      fixupPhase
+      mkdir -p $out/share/applications
+      ln -s ${desktopItem}/share/applications/* $out/share/applications
+      patchelf \
+        --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+        --set-rpath "${atomEnv.libPath}:$out/lib/mist" \
+        $out/lib/mist/mist
+    '';
+      # See https://github.com/ethereum/mist/issues/3077
+      #wrapProgram $out/lib/mist/mist \
+      #  --add-flags "--gethpath ${go-ethereum}/bin/geth" \
+      #  --prefix PATH : ${go-ethereum}/bin
+  };
+
+  mist = stdenv.mkDerivation linux;
+in
+buildFHSUserEnv {
+  name = "mist";
+
+  targetPkgs = pkgs: with pkgs; with xorg; [
+     mist
+  ];
+
+  extraInstallCommands = ''
+    mkdir -p "$out/share/applications"
+    cp "${desktopItem}/share/applications/"* $out/share/applications
+  '';
+
+  runScript = "mist";
+}
