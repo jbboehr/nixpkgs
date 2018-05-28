@@ -1,4 +1,4 @@
-{ stdenv, consul, ruby_2_3, bundlerEnv, zip }:
+{ stdenv, consul, ruby_2_3, bundlerEnv, zip, v8_3_16_14 }:
 
 let
   # `sass` et al
@@ -14,13 +14,16 @@ stdenv.mkDerivation {
 
   src = consul.src;
 
-  buildInputs = [ ruby_2_3 gems zip ];
+  patches = [ ./ui-v8.patch ];
 
-  patchPhase = "patchShebangs ./ui/scripts/dist.sh";
+  buildInputs = [ ruby_2_3 gems zip v8_3_16_14 ];
+
+  prePatch = "patchShebangs ./ui/scripts/dist.sh";
 
   buildPhase = ''
     # Build ui static files
     cd ui
+    cat *.lock
     make dist
   '';
 
