@@ -1,10 +1,11 @@
-{ stdenv, consul, ruby, bundlerEnv, zip }:
+{ stdenv, consul, ruby_2_3, bundlerEnv, zip }:
 
 let
   # `sass` et al
   gems = bundlerEnv {
     name = "consul-ui-deps";
     gemdir = ./.;
+    ruby = ruby_2_3;
   };
 in
 
@@ -13,7 +14,7 @@ stdenv.mkDerivation {
 
   src = consul.src;
 
-  buildInputs = [ ruby gems zip ];
+  buildInputs = [ ruby_2_3 gems zip ];
 
   patchPhase = "patchShebangs ./ui/scripts/dist.sh";
 
