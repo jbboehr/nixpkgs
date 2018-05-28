@@ -1,11 +1,11 @@
-{ stdenv, consul, ruby_2_3, bundlerEnv, zip, v8_3_16_14 }:
+{ stdenv, consul, ruby_2_5, bundlerEnv, zip }:
 
 let
   # `sass` et al
   gems = bundlerEnv {
     name = "consul-ui-deps";
     gemdir = ./.;
-    ruby = ruby_2_3;
+    ruby = ruby_2_5;
   };
 in
 
@@ -14,9 +14,9 @@ stdenv.mkDerivation {
 
   src = consul.src;
 
-  patches = [ ./ui-v8.patch ];
+  patches = [ ./ui-lock.patch ];
 
-  buildInputs = [ ruby_2_3 gems zip v8_3_16_14 ];
+  buildInputs = [ ruby_2_5 gems zip ];
 
   prePatch = "patchShebangs ./ui/scripts/dist.sh";
 
@@ -24,6 +24,7 @@ stdenv.mkDerivation {
     # Build ui static files
     cd ui
     cat *.lock
+    bundle check || true
     make dist
   '';
 
